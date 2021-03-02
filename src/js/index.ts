@@ -1,68 +1,64 @@
-import * as THREE from 'three';
-import ARButton from './ARButton'
+import * as THREE from 'three'
+import { Color } from 'three'
+import WebGL from './WebGL'
 
-class ARObject {
-  camera: THREE.PerspectiveCamera
-  scene: THREE.Scene
-  renderer: THREE.WebGLRenderer
-  aspect: number
-  controller: THREE.Group
+const startButton = document.getElementById('start-button') as HTMLButtonElement
 
-  constructor() {
-    const fov = 70
-    const aspect = window.innerWidth / window.innerHeight
-    const near = 0.01
-    const far = 20
-
-    this.aspect = aspect
-    this.camera = new THREE.PerspectiveCamera(fov, aspect, near, far)
-    this.scene = new THREE.Scene()
-    this.renderer = new THREE.WebGLRenderer({antialias: true, alpha: true})
-    this.controller = new THREE.Group()
-  }
-
-  async init() {
-    this.renderer.setPixelRatio(window.devicePixelRatio)
-    this.renderer.setSize(window.innerWidth, window.innerHeight)
-    this.renderer.xr.enabled = true
-    // this.renderer.shadowMap.enabled = true
-    // this.renderer.shadowMap.autoUpdate = true
-    // this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
-    const renderDom = document.getElementById('renderer')
-    renderDom && renderDom.appendChild(this.renderer.domElement)
-
-    // const helper = new THREE.CameraHelper(light.shadow.camera)
-    // this.scene.add(helper)
-
-    const arButton = new ARButton(
-      this.renderer, this.scene, {
-        requiredFeatures: ['local', 'hit-test']
-      }
-    )
-
-    const targetDom = document.getElementById('webAR')
-    targetDom && targetDom.appendChild(await arButton.createButton())
-
-    window.addEventListener('resize', () => {
-      this.camera.aspect = this.aspect
-      this.camera.updateProjectionMatrix()
-      this.renderer.setSize(window.innerWidth, window.innerHeight)
-    }, false)
-
-    this.controller = this.renderer.xr.getController(0)
-    this.controller.addEventListener('selectend', () => {
-      this.controller.userData.isSelecting = true
-    })
-
-    this.animate()
-  }
-
-  private animate() {
-    this.renderer.setAnimationLoop(() =>
-      this.renderer.render(this.scene, this.camera)
-    )
-  }
+const createReticle = () => {
+  const ringGeometry = new THREE.RingGeometry(0.03, 0.05, 50)
+  ringGeometry.rotateX(-0.5 * Math.PI)
+  const material = new THREE.MeshBasicMaterial({
+    color: new Color('#f3f705'),
+    side: THREE.DoubleSide
+  })
+  const reticle = new THREE.Mesh(ringGeometry, material)
+  reticle.name = 'reticle'
+  return reticle
 }
 
-const arObject = new ARObject()
-arObject.init()
+startButton.addEventListener('click', async() => {
+  const canvas = document.getElementById('webAR') as HTMLCanvasElement
+  const webGL = new WebGL(canvas)
+
+  const session = await navigator['xr'].requestSession('immersive-ar', {
+    requiredFeatures: ['local', 'hit-test']
+  })
+  const refSpace = await session.requestReferenceSpace('viewer')
+  const xrHitTestSource = await session.requestHitTestSource({space: refSpace})
+  const xrRefSpace = await session.requestReferenceSpace('local')
+  const context: any = webGL.context
+  await context.makeXRCompatible()
+  webGL.renderer.xr.setReferenceSpaceType('local')
+  webGL.renderer.xr.setSession(session)
+  session.addEventListener('end', () => location.reload())
+
+  const reticle = createReticle()
+  webGL.scene.add(reticle)
+
+  const onXRFrame = (_, frame) => {
+    const hitTestResults = frame.getHitTestResults(xrHitTestSource)
+    if(hitTestResults.length > 0) {
+      const pose = hitTestResults[0].getPose(xrRefSpace)
+      const { position, orientation } = pose.transform
+      reticle.position.set(position.x, position.y, position.z)
+      reticle.quaternion.set(orientation.x, orientation.y, orientation.z, orientation.w)
+      reticle.updateMatrix()
+    }
+
+    session.requestAnimationFrame((_, frame) => onXRFrame(_, frame))
+  }
+
+  session.requestAnimationFrame((_, frame) => {
+    onXRFrame(_, frame)
+  })
+})
+
+window.onload = () => {
+  const xr = navigator['xr']
+  if(!xr) {
+    startButton.innerText = 'WebXR not available'
+    startButton.disabled = true
+    return
+  }
+  startButton.innerText = 'Starat WebAR'
+}
