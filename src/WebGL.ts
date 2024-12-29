@@ -21,6 +21,7 @@ class WebGL {
 
     this.renderer = new THREE.WebGLRenderer({
       canvas: canvas,
+      context: context,
       antialias: true,
       alpha: true
     })

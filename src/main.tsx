@@ -64,6 +64,19 @@ startButton.addEventListener('click', async() => {
     session.requestAnimationFrame((_, frame) => onXRFrame(_, frame))
   }
 
+  const controller = webGL.renderer.xr.getController(0)
+  controller.addEventListener('select', () => {
+    const boxGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1)
+    const boxMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 })
+    const cube = new THREE.Mesh(boxGeometry, boxMaterial)
+    cube.position.copy(reticle.position)
+    // cubeを高さの半分だけ上に移動
+    cube.position.y += 0.05
+    cube.quaternion.copy(reticle.quaternion)
+    console.log(reticle.position)
+    webGL.scene.add(cube)
+  })
+
   session.requestAnimationFrame((_, frame) => {
     onXRFrame(_, frame)
   })
