@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { Color } from 'three'
-import WebGL from './WebGL'
+import WebGL from "./WebGL"
 
 const startButton = document.getElementById('start-button') as HTMLButtonElement
 
@@ -20,11 +20,23 @@ startButton.addEventListener('click', async() => {
   const canvas = document.getElementById('webAR') as HTMLCanvasElement
   const webGL = new WebGL(canvas)
 
-  const session = await navigator['xr'].requestSession('immersive-ar', {
+  if (!navigator['xr']) {
+    console.error('WebXR not available');
+    return;
+  }
+  const session = await navigator['xr']!.requestSession('immersive-ar', {
     requiredFeatures: ['local', 'hit-test']
   })
   const refSpace = await session.requestReferenceSpace('viewer')
+  if (!session.requestHitTestSource) {
+    console.error('requestHitTestSource is not available');
+    return;
+  }
   const xrHitTestSource = await session.requestHitTestSource({space: refSpace})
+  if(!xrHitTestSource) {
+    console.error('xrHitTestSource is not available');
+    return;
+  }
   const xrRefSpace = await session.requestReferenceSpace('local')
   const context: any = webGL.context
   await context.makeXRCompatible()
@@ -35,10 +47,14 @@ startButton.addEventListener('click', async() => {
   const reticle = createReticle()
   webGL.scene.add(reticle)
 
-  const onXRFrame = (_, frame) => {
+  const onXRFrame = (time: DOMHighResTimeStamp, frame: XRFrame) => {
     const hitTestResults = frame.getHitTestResults(xrHitTestSource)
     if(hitTestResults.length > 0) {
       const pose = hitTestResults[0].getPose(xrRefSpace)
+      if(!pose) {
+        console.error('pose is not available');
+        return;
+      }
       const { position, orientation } = pose.transform
       reticle.position.set(position.x, position.y, position.z)
       reticle.quaternion.set(orientation.x, orientation.y, orientation.z, orientation.w)

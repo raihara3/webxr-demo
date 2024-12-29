@@ -8,8 +8,12 @@ class WebGL {
   mouse: THREE.Vector2
   renderer: THREE.WebGLRenderer
 
-  constructor(canvas) {
-    this.context = canvas.getContext('webgl')
+  constructor(canvas: HTMLCanvasElement) {
+    const context = canvas.getContext('webgl')
+    if (!context) {
+      throw new Error('WebGL not supported')
+    }
+    this.context = context
     this.scene = new THREE.Scene()
     this.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20)
     this.raycaster = new THREE.Raycaster()
