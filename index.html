@@ -7,7 +7,10 @@
     <title>WebXR Device API</title>
   </head>
   <body>
-    <button id="start-button"></button>
+    <button style="position: relative; z-index: 10;" id="start-button"></button>
+    <div id="overlay-dom">
+      <div style="width: 300px; height: 100px; background-color: aquamarine;">hogehoge</div>
+    </div>
     <canvas id="webAR" class="webAR"></canvas>
     <script type="module" src="/src/main.tsx"></script>
   </body>

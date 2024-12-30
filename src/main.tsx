@@ -3,6 +3,7 @@ import { Color } from 'three'
 import WebGL from "./WebGL"
 
 const startButton = document.getElementById('start-button') as HTMLButtonElement
+const overlayDom = document.getElementById('overlay-dom') as HTMLDivElement
 
 const createReticle = () => {
   const ringGeometry = new THREE.RingGeometry(0.03, 0.05, 50)
@@ -25,7 +26,9 @@ startButton.addEventListener('click', async() => {
     return;
   }
   const session = await navigator['xr']!.requestSession('immersive-ar', {
-    requiredFeatures: ['local', 'hit-test']
+    requiredFeatures: ['local', 'hit-test'],
+    optionalFeatures: ['dom-overlay'],
+    domOverlay: { root: overlayDom },
   })
   const refSpace = await session.requestReferenceSpace('viewer')
   if (!session.requestHitTestSource) {
